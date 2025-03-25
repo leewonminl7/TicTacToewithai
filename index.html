@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe vs AI</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; justify-content: center; margin-top: 20px; }
+        .cell { width: 100px; height: 100px; font-size: 2rem; background: lightgray; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #start-btn { margin-top: 10px; padding: 10px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Tic-Tac-Toe vs AI</h1>
+    
+    <label for="difficulty">Choose Difficulty:</label>
+    <select id="difficulty">
+        <option value="">--Select Difficulty--</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+    </select>
+    
+    <button id="start-btn" onclick="startGame()">Start Game</button>
+
+    <div id="status">Select a difficulty and start the game</div>
+    <div id="board" style="pointer-events: none;"></div>
+
+    <script>
+        let gameBoard = [" ", " ", " ", " ", " ", " ", " ", " ", " "];
+        let gameStarted = false;
+        let selectedDifficulty = "";
+
+        function createBoard() {
+            const board = document.getElementById("board");
+            board.innerHTML = ""; 
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement("div");
+                cell.classList.add("cell");
+                cell.dataset.index = i;
+                cell.innerText = gameBoard[i];
+                cell.addEventListener("click", () => playerMove(i));
+                board.appendChild(cell);
+            }
+        }
+
+        async function startGame() {
+            const difficulty = document.getElementById("difficulty").value;
+            if (!difficulty) {
+                alert("Please select a difficulty level first!");
+                return;
+            }
+            
+            selectedDifficulty = difficulty;
+            gameStarted = true;
+
+            await fetch("http://127.0.0.1:5006/reset", { method: "POST" });
+
+            gameBoard = [" ", " ", " ", " ", " ", " ", " ", " ", " "];
+            document.getElementById("status").innerText = "Your Turn";
+            document.getElementById("board").style.pointerEvents = "auto";  
+            createBoard();
+        }
+
+        async function playerMove(index) {
+            if (!gameStarted || gameBoard[index] !== " ") return;
+
+            const response = await fetch("http://127.0.0.1:5006/move", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ position: index, difficulty: selectedDifficulty })
+            });
+
+            const data = await response.json();
+            if (data.error) return alert(data.error);
+
+            gameBoard = data.board;
+            createBoard();
+
+            if (data.winner) {
+                document.getElementById("status").innerText = data.winner === "Draw" ? "It's a Draw!" : `${data.winner} Wins!`;
+                document.getElementById("board").style.pointerEvents = "none";  
+                gameStarted = false;  
+            }
+        }
+
+        createBoard();  
+    </script>
+</body>
+</html>
